@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>记事番茄钟 ✨</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#e8a87c" />
+<link rel="apple-touch-icon" href="icon-512.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="番茄钟" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #faf5ef;
+      color: #5c4a3d;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .deco {
+      position: fixed;
+      pointer-events: none;
+      z-index: 0;
+      font-size: 24px;
+      opacity: 0.35;
+      animation: floatDeco 6s ease-in-out infinite;
+    }
+    @keyframes floatDeco {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-18px) rotate(12deg); }
+    }
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+    h1 {
+      font-size: 22px;
+      text-align: center;
+      margin-bottom: 18px;
+      color: #8b6f5e;
+    }
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 3px 12px rgba(175, 140, 120, 0.10);
+      margin-bottom: 16px;
+      border: 2px solid #f0ddd3;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .timer-display { text-align: center; padding: 10px 0 6px; }
+    .timer-time {
+      font-size: 64px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: #c27a5a;
+      line-height: 1.1;
+    }
+    .timer-label { font-size: 14px; color: #b8947e; margin-top: 4px; }
+    .pomodoro-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 12px 0 14px;
+    }
+    .pomo-dot {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: #f5e0d4;
+      border: 2px solid #e8c4b0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.3s;
+    }
+    .pomo-dot.done {
+      background: #e8a87c;
+      border-color: #d4845a;
+      color: #fff;
+    }
+    .timer-btns {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn-start { background: #e8a87c; color: #fff; box-shadow: 0 3px 0 #d4845a; }
+    .btn-start:hover { background: #e09a6a; }
+    .btn-pause { background: #d4a5a5; color: #fff; box-shadow: 0 3px 0 #c28a8a; }
+    .btn-reset { background: #f0ddd3; color: #8b6f5e; box-shadow: 0 3px 0 #e0c8b8; }
+    .btn-skip { background: #c9b896; color: #fff; box-shadow: 0 3px 0 #b5a27e; }
+    .row { display: flex; gap: 8px; margin-bottom: 8px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #f0ddd3;
+      border-radius: 12px;
+      font-size: 14px;
+      background: #fef8f3;
+      color: #5c4a3d;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #e8a87c; }
+    textarea { resize: vertical; min-height: 56px; }
+    .btn-add { background: #b8c9a1; color: #fff; box-shadow: 0 3px 0 #9ab07e; }
+    .btn-add:hover { background: #a8b991; }
+    .btn-clear { background: #f0ddd3; color: #8b6f5e; box-shadow: 0 3px 0 #e0c8b8; }
+    .note-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px dashed #f0ddd3;
+    }
+    .note-item:last-child { border-bottom: none; }
+    .note-content { flex: 1; }
+    .note-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+    .note-meta {
+      font-size: 12px;
+      color: #b8947e;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .note-desc { font-size: 13px; color: #7a6355; white-space: pre-wrap; }
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .tag-life { background: #fef3c7; color: #92400e; }
+    .tag-study { background: #dcfce7; color: #166534; }
+    .tag-work { background: #f3e8ff; color: #6b21a8; }
+    .tag-important { background: #fee2e2; color: #b91c1c; }
+    .actions { display: flex; gap: 6px; margin-top: 6px; }
+    .btn-sm {
+      padding: 5px 12px;
+      font-size: 12px;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-toggle { background: #f0ddd3; color: #8b6f5e; }
+    .btn-del { background: #e8b4b4; color: #fff; }
+    .empty { text-align: center; color: #d4b8a8; padding: 18px 0; font-size: 14px; }
+    .stats-bar {
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+      padding: 6px 0;
+    }
+    .stat-item { flex: 1; }
+    .stat-num { font-size: 24px; font-weight: 800; color: #e8a87c; }
+    .stat-label { font-size: 11px; color: #b8947e; }
+    .celebrate-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(250, 245, 239, 0.88);
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    .celebrate-overlay.show { display: flex; }
+    .celebrate-emoji {
+      font-size: 72px;
+      animation: celebrateBounce 0.6s ease-in-out infinite alternate;
+    }
+    @keyframes celebrateBounce {
+      from { transform: scale(1) rotate(-5deg); }
+      to   { transform: scale(1.15) rotate(5deg); }
+    }
+    .celebrate-text { font-size: 22px; font-weight: 700; color: #c27a5a; margin-top: 12px; }
+    .celebrate-sub { font-size: 14px; color: #b8947e; margin-top: 6px; }
+    .celebrate-btn {
+      margin-top: 18px;
+      padding: 10px 28px;
+      border: none;
+      border-radius: 24px;
+      background: #e8a87c;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #d4845a;
+    }
+  </style>
+</head>
+<body>
+
+<div class="deco" style="top:8%;left:5%;animation-delay:0s;">🍅</div>
+<div class="deco" style="top:15%;right:8%;animation-delay:1s;">⭐</div>
+<div class="deco" style="top:40%;left:3%;animation-delay:2s;">🌸</div>
+<div class="deco" style="top:55%;right:5%;animation-delay:0.5s;">✨</div>
+<div class="deco" style="top:75%;left:8%;animation-delay:1.5s;">🍑</div>
+<div class="deco" style="top:30%;right:3%;animation-delay:3s;">🌿</div>
+<div class="deco" style="top:85%;right:10%;animation-delay:2.5s;">💛</div>
+<div class="deco" style="top:60%;left:12%;animation-delay:4s;">☁️</div>
+<div class="deco" style="top:5%;left:45%;animation-delay:1.8s;">🎀</div>
+<div class="deco" style="top:92%;left:40%;animation-delay:3.2s;">🌻</div>
+
+<div class="container">
+  <h1>🍅 记事番茄钟 ✨</h1>
+
+  <div class="card">
+    <div class="card-title">🍅 专注番茄钟</div>
+    <div class="timer-display">
+      <div class="timer-time" id="timerTime">25:00</div>
+      <div class="timer-label" id="timerLabel">准备开始专注吧 💪</div>
+    </div>
+    <div class="pomodoro-dots" id="pomoDots">
+      <div class="pomo-dot" id="dot0">🍅</div>
+      <div class="pomo-dot" id="dot1">🍅</div>
+      <div class="pomo-dot" id="dot2">🍅</div>
+      <div class="pomo-dot" id="dot3">🍅</div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-item"><div class="stat-num" id="todayPomos">0</div><div class="stat-label">今日番茄</div></div>
+      <div class="stat-item"><div class="stat-num" id="totalMinutes">0</div><div class="stat-label">专注分钟</div></div>
+      <div class="stat-item"><div class="stat-num" id="streakCount">0</div><div class="stat-label">连续完成</div></div>
+    </div>
+    <div class="timer-btns">
+      <button class="btn btn-start" id="startBtn" onclick="startTimer()">开始 🚀</button>
+      <button class="btn btn-pause" id="pauseBtn" onclick="pauseTimer()" style="display:none;">暂停 ⏸</button>
+      <button class="btn btn-reset" onclick="resetTimer()">重置 🔄</button>
+      <button class="btn btn-skip" onclick="skipTimer()">跳过 ⏭</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📝 添加记事</div>
+    <div class="row"><input id="titleInput" placeholder="标题，例如：复习高数、买牛奶 🥛" /></div>
+    <div class="row">
+      <select id="categorySelect">
+        <option value="生活">🏠 生活</option>
+        <option value="学习">📚 学习</option>
+        <option value="工作">💼 工作</option>
+        <option value="重要">🔥 重要</option>
+      </select>
+      <select id="statusSelect">
+        <option value="待办">⏳ 待办</option>
+        <option value="进行中">🔄 进行中</option>
+        <option value="已完成">✅ 已完成</option>
+      </select>
+    </div>
+    <div class="row"><textarea id="descInput" placeholder="备注，例如：晚上8点前完成 🌙"></textarea></div>
+    <div class="row">
+      <button class="btn btn-add" onclick="addNote()">添加 ✨</button>
+      <button class="btn btn-clear" onclick="clearDone()">清除已完成 🧹</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 我的记事</div>
+    <div id="noteList"></div>
+  </div>
+</div>
+
+<div class="celebrate-overlay" id="celebrateOverlay">
+  <div class="celebrate-emoji">🎉🍅🎊</div>
+  <div class="celebrate-text" id="celebrateTitle">番茄完成啦！</div>
+  <div class="celebrate-sub" id="celebrateSub">休息一下吧 ☕</div>
+  <button class="celebrate-btn" onclick="closeCelebrate()">知道啦 😊</button>
+</div>
+
+<script>
+// ===== 番茄钟 =====
+const WORK_MIN = 25, BREAK_MIN = 5, LONG_BREAK_MIN = 15, POMOS_BEFORE_LONG = 4;
+let secondsLeft = WORK_MIN * 60, timerRunning = false, timerInterval = null;
+let isBreak = false, pomoCount = 0, totalPomos = 0, totalFocusMin = 0, streak = 0;
+
+const timerTimeEl = document.getElementById("timerTime");
+const timerLabelEl = document.getElementById("timerLabel");
+const startBtn = document.getElementById("startBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+
+// 修复重复定义: 重命名计时器内 formatTime 为 formatTimer
+function formatTimer(s) {
+  return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+function updateDisplay() { timerTimeEl.textContent = formatTimer(secondsLeft); }
+function updateDots() {
+  for (let i = 0; i < POMOS_BEFORE_LONG; i++) {
+    const dot = document.getElementById("dot" + i);
+    dot.classList.toggle("done", i < pomoCount);
+    dot.textContent = i < pomoCount ? "✅" : "🍅";
+  }
+}
+function updateStats() {
+  document.getElementById("todayPomos").textContent = totalPomos;
+  document.getElementById("totalMinutes").textContent = totalFocusMin;
+  document.getElementById("streakCount").textContent = streak;
+}
+function saveStats() {
+  localStorage.setItem("pomo_stats", JSON.stringify({ totalPomos, totalFocusMin, streak, date: new Date().toDateString() }));
+}
+function loadStats() {
+  try {
+    const d = JSON.parse(localStorage.getItem("pomo_stats"));
+    if (d && d.date === new Date().toDateString()) {
+      totalPomos = d.totalPomos || 0;
+      totalFocusMin = d.totalFocusMin || 0;
+      streak = d.streak || 0;
+    }
+  } catch(e) {}
+  updateStats();
+}
+
+function startTimer() {
+  if (timerRunning) return;
+  timerRunning = true;
+  startBtn.style.display = "none";
+  pauseBtn.style.display = "";
+  timerLabelEl.textContent = isBreak ? "休息中 ☕🌿" : "专注中 💪🔥";
+  timerInterval = setInterval(() => {
+    secondsLeft--;
+    updateDisplay();
+    if (secondsLeft <= 0) {
+      clearInterval(timerInterval);
+      timerRunning = false;
+      startBtn.style.display = "";
+      pauseBtn.style.display = "none";
+      onTimerEnd();
+    }
+  }, 1000);
+}
+function pauseTimer() {
+  if (!timerRunning) return;
+  timerRunning = false;
+  clearInterval(timerInterval);
+  startBtn.style.display = "";
+  pauseBtn.style.display = "none";
+  timerLabelEl.textContent = "已暂停 😴";
+}
+function resetTimer() {
+  pauseTimer();
+  isBreak = false;
+  secondsLeft = WORK_MIN * 60;
+  updateDisplay();
+  timerLabelEl.textContent = "准备开始专注吧 💪";
+}
+function skipTimer() { pauseTimer(); onTimerEnd(); }
+
+function onTimerEnd() {
+  if (!isBreak) {
+    totalPomos++; totalFocusMin += WORK_MIN; streak++;
+    pomoCount = (pomoCount + 1) % POMOS_BEFORE_LONG;
+    updateDots(); updateStats(); saveStats();
+    if (totalPomos % POMOS_BEFORE_LONG === 0) {
+      isBreak = true; secondsLeft = LONG_BREAK_MIN * 60;
+      showCelebrate("长休息时间来啦！🌈", "休息 " + LONG_BREAK_MIN + " 分钟 🛋");
+    } else {
+      isBreak = true; secondsLeft = BREAK_MIN * 60;
+      showCelebrate("番茄完成啦！🍅", "休息 " + BREAK_MIN + " 分钟 ☕");
+    }
+  } else {
+    isBreak = false;
+    secondsLeft = WORK_MIN * 60;
+    timerLabelEl.textContent = "准备开始专注吧 💪";
+  }
+  updateDisplay();
+}
+
+function showCelebrate(title, sub) {
+  document.getElementById("celebrateTitle").textContent = title;
+  document.getElementById("celebrateSub").textContent = sub;
+  document.getElementById("celebrateOverlay").classList.add("show");
+}
+function closeCelebrate() {
+  document.getElementById("celebrateOverlay").classList.remove("show");
+}
+
+// ===== 记事表 =====
+const STORAGE_KEY = "daily_notes_v1";
+function loadNotes() { try { const d = localStorage.getItem(STORAGE_KEY); return d ? JSON.parse(d) : []; } catch(e) { return []; } }
+function saveNotes(notes) { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
+function escapeHtml(t) { if (!t) return ""; return t.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;"); }
+
+// 修复: 原先被截断的 note 时间格式化函数，重新命名为 formatNoteTime
+function formatNoteTime(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0") + " " +
+         String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+
+// 全局变量
+let notes = loadNotes();
+
+// 渲染记事列表
+function renderNotes() {
+  const container = document.getElementById("noteList");
+  if (!notes.length) {
+    container.innerHTML = `<div class="empty">✨ 还没有记事，添加一条吧～</div>`;
+    return;
+  }
+  // 排序：未完成在前，然后按时间倒序（新添加的在上）
+  const sorted = [...notes].sort((a, b) => {
+    if (a.status === "已完成" && b.status !== "已完成") return 1;
+    if (a.status !== "已完成" && b.status === "已完成") return -1;
+    return b.id - a.id;
+  });
+  let html = "";
+  sorted.forEach(note => {
+    const catClass = 
+      note.category === "生活" ? "tag-life" :
+      note.category === "学习" ? "tag-study" :
+      note.category === "工作" ? "tag-work" : "tag-important";
+    const statusIcon = 
+      note.status === "待办" ? "⏳" :
+      note.status === "进行中" ? "🔄" : "✅";
+    html += `
+      <div class="note-item">
+        <div class="note-content">
+          <div class="note-title">${escapeHtml(note.title)}</div>
+          <div class="note-meta">
+            <span class="tag ${catClass}">${note.category}</span>
+            <span>${statusIcon} ${note.status}</span>
+            <span>🕒 ${formatNoteTime(note.createdAt)}</span>
+          </div>
+          ${note.desc ? `<div class="note-desc">${escapeHtml(note.desc)}</div>` : ""}
+          <div class="actions">
+            <button class="btn-sm btn-toggle" onclick="toggleNoteStatus(${note.id})">切换状态</button>
+            <button class="btn-sm btn-del" onclick="deleteNote(${note.id})">删除</button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+// 添加记事
+function addNote() {
+  const titleInput = document.getElementById("titleInput");
+  const categorySelect = document.getElementById("categorySelect");
+  const statusSelect = document.getElementById("statusSelect");
+  const descInput = document.getElementById("descInput");
+  
+  const title = titleInput.value.trim();
+  if (!title) { alert("请输入标题～ ✏️"); return; }
+  
+  const newNote = {
+    id: Date.now(),
+    title: title,
+    category: categorySelect.value,
+    status: statusSelect.value,
+    desc: descInput.value.trim(),
+    createdAt: Date.now()
+  };
+  
+  notes.push(newNote);
+  saveNotes(notes);
+  renderNotes();
+  
+  // 清空输入
+  titleInput.value = "";
+  descInput.value = "";
+  titleInput.focus();
+}
+
+// 切换状态：待办 → 进行中 → 已完成 → 待办
+function toggleNoteStatus(id) {
+  const note = notes.find(n => n.id === id);
+  if (!note) return;
+  if (note.status === "待办") note.status = "进行中";
+  else if (note.status === "进行中") note.status = "已完成";
+  else note.status = "待办";
+  saveNotes(notes);
+  renderNotes();
+}
+
+// 删除单条记事
+function deleteNote(id) {
+  if (!confirm("确定删除这条记事吗？ 🗑️")) return;
+  notes = notes.filter(n => n.id !== id);
+  saveNotes(notes);
+  renderNotes();
+}
+
+// 清除已完成
+function clearDone() {
+  const doneCount = notes.filter(n => n.status === "已完成").length;
+  if (doneCount === 0) { alert("还没有已完成的记事哦～ 🧺"); return; }
+  if (!confirm(`确定清除 ${doneCount} 条已完成记事吗？`)) return;
+  notes = notes.filter(n => n.status !== "已完成");
+  saveNotes(notes);
+  renderNotes();
+}
+
+// ===== 初始化 =====
+window.onload = function() {
+  loadStats();
+  updateDots();
+  updateDisplay();
+  renderNotes();
+  
+  // 暴露全局函数给 onclick (已在script中声明，不需要额外暴露，但确保)
+  window.startTimer = startTimer;
+  window.pauseTimer = pauseTimer;
+  window.resetTimer = resetTimer;
+  window.skipTimer = skipTimer;
+  window.closeCelebrate = closeCelebrate;
+  window.addNote = addNote;
+  window.clearDone = clearDone;
+  window.toggleNoteStatus = toggleNoteStatus;
+  window.deleteNote = deleteNote;
+};
+
+// 修复原先formatTime函数名冲突，保留一个全局的formatTimer给计时器使用，记事用formatNoteTime
+// 计时器每秒更新，没问题。
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
